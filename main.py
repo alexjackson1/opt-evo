@@ -26,6 +26,7 @@ if __name__ == "__main__":
     parser.add_argument("--fitness_fn", type=str, default="acc")
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--out_dir", type=str, default="results")
+    parser.add_argument("--data_dir", type=str, default="data")
     args = parser.parse_args()
 
     # Create output directory
@@ -38,7 +39,7 @@ if __name__ == "__main__":
     # Initialise model and data
     model = BatchLeNet()
 
-    train_images, train_labels, test_images, test_labels = mnist()
+    train_images, train_labels, test_images, test_labels = mnist(data_dir=args.data_dir)
     loader = DataLoader(train_images, train_labels, batch_size=args.batch_size)
 
     # Initialise population
