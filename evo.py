@@ -1,28 +1,16 @@
-from functools import partial
-import sys
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Generator,
-    Iterable,
-    List,
-    NamedTuple,
-    Optional,
-    Tuple,
-    Union,
-)
-from jaxtyping import Array, Float, PyTreeDef
+from typing import Any, Dict, Generator, Literal, Optional, Tuple, Union
+from jaxtyping import Array, Float
+
+import tqdm
+import numpy as np
 
 import jax
 import jax.numpy as jnp
 import jax.random as jr
-import flax.linen as nn
-import flax.struct as struct
-import numpy as np
-import tqdm
 
-from models import LeNet, Module
+import flax.linen as nn
+
+from models import Module
 from loader import DataLoader
 
 
@@ -325,7 +313,7 @@ def evolve(
     mutation_sigma: float = 0.1,
     crossover_p: float = 0.5,
     tournament_size: int = 5,
-    maximize: bool = True,
+    fitness_fn: Literal["acc", "loss"] = "acc",
     progress: Optional[tqdm.tqdm] = None,
 ) -> Float[Array, "ind param"]:
     """
@@ -341,7 +329,7 @@ def evolve(
         mutation_sigma: The standard deviation of the noise to add to each gene.
         crossover_p: The probability of crossing over each gene.
         tournament_size: The number of individuals to sample for each tournament.
-        maximize: Whether to maximise or minimise the fitness.
+        fitness_fn: The fitness function to use.
         progress: A tqdm progress bar to update.
 
     Returns:
@@ -349,11 +337,19 @@ def evolve(
     """
     crossover_key, mutation_key = jr.split(rng)
 
+    if fitness_fn == "acc":
+        maximize = True
+        calc_fitness = evaluate_accuracy
+    elif fitness_fn == "loss":
+        maximize = False
+        calc_fitness = evaluate_cross_entropy_loss
+    else:
+        raise ValueError(f"Unknown fitness function: {fitness_fn}")
+
     def fitness_fn(individual: Float[Array, "param"]) -> float:
         input_size = np.prod(ldr[0].x.shape)
         variables = to_variables(model, individual, input_size)
-        x = evaluate_accuracy(model, variables, ldr, progress)
-        return x
+        return calc_fitness(model, variables, ldr, progress)
 
     # Calculate the fitness of each individual
     fitness: Float[Array, "ind"] = jax.vmap(fitness_fn)(pop)
