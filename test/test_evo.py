@@ -5,7 +5,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pytest
 
 import evo
-from models import LeNet, Module
+from models import FeedForward, Module
 import jax
 import jax.numpy as jnp
 import jax.random as jr
@@ -13,7 +13,7 @@ import jax.random as jr
 
 @pytest.fixture
 def model():
-    return LeNet(features=[300, 100, 100], num_classes=10, use_bias=True)
+    return FeedForward(features=[300, 100, 100], num_classes=10, use_bias=True)
 
 
 def test_init_individual(model: Module):

@@ -5,8 +5,6 @@ import jax.numpy as jnp
 import flax.linen as nn
 import flax.struct as struct
 
-from loader import DataLoader
-
 
 class Module(nn.Module):
     features: List[int] = struct.field(default_factory=lambda: [300, 100, 100])
@@ -24,7 +22,7 @@ class Module(nn.Module):
         return weights + biases
 
 
-class LeNet(Module):
+class FeedForward(Module):
     @nn.compact
     def __call__(self, x: Float[Array, "x1 x2 ch"]) -> Float[Array, "cl"]:
         x = jnp.reshape(x, -1)  # flatten
@@ -39,8 +37,30 @@ class LeNet(Module):
         return x
 
 
-BatchLeNet = nn.vmap(
-    LeNet,
+BatchFeedForward = nn.vmap(
+    FeedForward,
+    in_axes=0,
+    out_axes=0,
+    variable_axes={"params": None},
+    split_rngs={"params": False},
+)
+
+
+class Conv(Module):
+    @nn.compact
+    def __call__(self, x: Float[Array, "x1 x2 ch"]) -> Float[Array, "cl"]:
+        x = nn.Conv(features=28, kernel_size=(2, 2), use_bias=self.use_bias)(x)
+        x = nn.max_pool(x, window_shape=(2, 2), strides=(2, 2))
+        x = jnp.reshape(x, -1)  # flatten
+        x = nn.Dense(100, use_bias=self.use_bias)(x)
+        x = nn.relu(x)
+        x = nn.Dense(self.num_classes, use_bias=self.use_bias)(x)
+        x = nn.softmax(x, axis=0)  # normalise
+        return x
+
+
+BatchConv = nn.vmap(
+    Conv,
     in_axes=0,
     out_axes=0,
     variable_axes={"params": None},
